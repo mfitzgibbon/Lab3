@@ -56,7 +56,7 @@ namespace Yahtzee
 
             for(int count = 0; count < numDie; count++)
             {
-                dice.Add(rand.Next(1, 6));
+                dice.Add(rand.Next(1, 7));
             }
         }
 
@@ -65,6 +65,12 @@ namespace Yahtzee
         public void MoveRollDiceToKeep(List<int> roll, List<int> keep)
         {
 
+            foreach(int num in roll.ToList())
+            {
+                keep.Add(num);
+                roll[roll.IndexOf(num)] = NONE;
+                
+            }
         }
 
         #region Scoring Methods
@@ -186,9 +192,9 @@ namespace Yahtzee
         {
             int sum = 0;
 
-            foreach(int count in counts)
+            for(int i = 0; i < counts.Length; i++)
             {
-                sum += count;
+                sum += counts[i] * (i + 1);
             }
 
             return sum;
@@ -204,7 +210,7 @@ namespace Yahtzee
             {
                 return Sum(counts);
             }
-            return whichValue;
+            return 0;
         }
 
         private int ScoreFourOfAKind(int[] counts)
@@ -216,7 +222,7 @@ namespace Yahtzee
                 return Sum(counts);
             }
 
-            return whichValue;
+            return 0;
         }
 
         private int ScoreYahtzee(int[] counts)
@@ -228,7 +234,7 @@ namespace Yahtzee
                 return 50;
             }
 
-            return whichValue;
+            return 0;
         }
 
         /* This method calls HasCount(2 and HasCount(3 to determine if there's a full house.  It calls sum to 
@@ -241,23 +247,55 @@ namespace Yahtzee
 
             if(HasCount(2, counts, out whichValueTwo) && HasCount(3, counts, out whichValueThree))
             {
-                return Sum(counts);
+                return 25;
             }
 
-            return whichValueThree;
+            return 0;
         }
 
         private int ScoreSmallStraight(int[] counts)
         {
-            
+            //viable die to achieve small straight
+            //1234,2345,3456
+            bool isSmallStraight = false;
 
+            if (counts[0] > 0 && counts[1] > 0 && counts[2] > 0 && counts[3] > 0)
+            {
+                isSmallStraight = true;
+            }
+            else if (counts[1] > 0 && counts[2] > 0 && counts[3] > 0 && counts[4] > 0)
+            {
+                isSmallStraight = true;
+            }
+            else if (counts[2] > 0 && counts[3] > 0 && counts[4] > 0 && counts[5] > 0)
+            {
+                isSmallStraight = true;
+            }
 
-            return 30;
+            if (isSmallStraight == true)
+                return 30;
+            else
+                return 0;
+
         }
 
         private int ScoreLargeStraight(int[] counts)
-        {   
-            return 0;
+        {
+            bool isLargeStraight = false;
+
+            if(counts[0] > 0 && counts[1] > 0 && counts[2] > 0 && counts[3] > 0 && counts[4] > 0)
+            {
+                isLargeStraight = true;
+            }
+            else if (counts[1] > 0 && counts[2] > 0 && counts[3] > 0 && counts[4] > 0 && counts[5] > 0)
+            {
+                isLargeStraight = true;
+            }
+
+            if (isLargeStraight)
+                return 40;
+            else
+                return 0;
         }
 
         private int ScoreChance(int[] counts)
@@ -307,28 +345,52 @@ namespace Yahtzee
 
         // set each value to some negative number because 
         // a 0 or a positive number could be an actual score
-        private void ResetScoreCard(int[] scoreCard, int scoreCardCount)
+        private void ResetScoreCard(int[] scoreCard, out int scoreCardCount)
         {
-            foreach(int score in scoreCard)
+            for(int i = 0; i < scoreCard.Length; i++)
             {
-                if(score != NONE)
-                {
-                    scoreCard[Array.IndexOf(scoreCard, score)] = NONE;
-                    scoreCardCount--;
-                }
+                scoreCard[i] = NONE;
             }
+            scoreCardCount = 0;
         }
 
         // this set has to do with user's scorecard UI
         private void ResetUserUIScoreCard()
         {
-
+            Label userScoreLabel = new Label();
+            ResetScoreCard(userScores, out uScoreCardCount);
+            for(int i = 0; i < userScores.Length; i++)
+            {
+                userScoreLabel = GetUserScoreLabel(i);
+                userScoreLabel.Text = " ";
+                userScoreLabel.Enabled = true;
+            }
+            userSum.Text = " ";
+            userBonus.Text = " ";
+            userTotalScore.Text = " ";
         }
 
         // this method adds the subtotals as well as the bonus points when the user is done playing
         public void UpdateUserUIScoreCard()
         {
+            int subtotal = userScores[ONES] + userScores[TWOS] + userScores[THREES] + userScores[FOURS]
+                + userScores[FIVES] + userScores[SIXES];
 
+            userSum.Text = subtotal.ToString();
+
+            if (subtotal >= 63)
+            {
+                userBonus.Text = "35";
+                subtotal += 35;
+            }
+            else
+                userBonus.Text = "0";
+
+            subtotal += userScores[THREE_OF_A_KIND] + userScores[FOUR_OF_A_KIND] + userScores[FULL_HOUSE] + userScores[SMALL_STRAIGHT]
+                + userScores[LARGE_STRAIGHT] + userScores[CHANCE] + userScores[YAHTZEE];
+
+            userTotalScore.Text = subtotal.ToString();
+                
         }
 
         /* When I move a die from roll to keep, I put a -1 in the spot that the die used to be in.
@@ -359,6 +421,12 @@ namespace Yahtzee
         {
             PictureBox die = (PictureBox)this.Controls["keep" + i];
             return die;
+        }
+
+        private Label GetUserScoreLabel(int i)
+        {
+            Label scoreLabel = (Label)scoreCardPanel.Controls["user"+i];
+            return scoreLabel;
         }
 
         public void HideKeepDie(int i)
@@ -454,7 +522,7 @@ namespace Yahtzee
             * Hide the computer's dice
             */
 
-            ResetScoreCard(userScores, uScoreCardCount);
+            ResetScoreCard(userScores, out uScoreCardCount);
             HideAllRollDice();
             HideAllKeepDice();
             HideAllComputerKeepDice();
@@ -467,6 +535,12 @@ namespace Yahtzee
             // any of the die that were moved back and forth from roll to keep by the user
             // are "collapsed" in the keep data structure
             // show the keep dice again
+            HideAllKeepDice();
+            CollapseDice(userKeeps);
+            for(int i = 0; i < userKeeps.Count; i++)
+            {
+                ShowKeepDie(i);
+            }
 
             // START HERE
             // clear the roll data structure
@@ -478,13 +552,23 @@ namespace Yahtzee
             // roll the right number of dice
             // show the roll picture boxes
             Roll(5 - userKeeps.Count(), userRolls);
+            if(userKeeps.Count == 0)
             ShowAllRollDie();
+            else
+            {
+                for(int i = 0; i < userRolls.Count; i++)
+                {
+                    ShowRollDie(i);
+                }
+            }
 
             // increment the number of rolls
             // disable the button if you've rolled 3 times
+            
             rollCount++;
             if (rollCount == 3)
                 rollButton.Enabled = false;
+                
         }
 
         private void userScorecard_DoubleClick(object sender, EventArgs e)
@@ -500,8 +584,21 @@ namespace Yahtzee
             // put the score in the scorecard and the UI
             // disable this element in the score card
             Label clickedLabel = (Label)sender;
-            int score = Score(clickedLabel.Name.Last(), userKeeps);
-            userScores[clickedLabel.Name.Last()] = score;
+            string labelName = clickedLabel.Name;
+            int whichLabel = NONE;
+
+            if (char.IsDigit(labelName[labelName.Length - 2]))
+            {
+                whichLabel = int.Parse(labelName.Substring(labelName.Length - 2));
+            }
+            else
+            {
+                whichLabel = (int)Char.GetNumericValue(labelName[labelName.Length - 1]);
+            }
+
+
+           int score = Score(whichLabel, userKeeps);
+            userScores[whichLabel] = score;
             clickedLabel.Text = score.ToString();
             clickedLabel.Enabled = false;
 
@@ -511,13 +608,19 @@ namespace Yahtzee
             // enable/disable buttons
             userKeeps.Clear();
             rollCount = 0;
+            rollButton.Enabled = true;
             uScoreCardCount++;
 
             // when it's the end of the game
             // update the sum(s) and bonus parts of the score card
             // enable/disable buttons
             // display a message box?
-            
+            if(uScoreCardCount == userScores.Length)
+            {
+                UpdateUserUIScoreCard();
+                rollButton.Enabled = false;
+                //MessageBox.Show()
+            }
             
         }
 
@@ -531,12 +634,27 @@ namespace Yahtzee
             // sometimes that will be at the end but if the user is moving dice back and forth
             // it may be in the middle somewhere
             int openPB = GetFirstAvailablePB(userKeeps);
-            userKeeps[openPB] = clickedDie.Name.Last();
+            string labelName = clickedDie.Name;
+            int rollDieIndex = (int)Char.GetNumericValue(labelName[labelName.Length - 1]);
+            int keepDieIndex = -1;
+            int rollValue = userRolls[rollDieIndex];
+
+            if (openPB != NONE)
+            {
+                userKeeps[openPB] = rollValue;
+                keepDieIndex = openPB;
+            }
+            else
+            {
+                userKeeps.Add(rollValue);
+                keepDieIndex = userKeeps.LastIndexOf(rollValue);
+            }
 
             // clear the die in the roll data structure
             // hide the picture box
-            userRolls.Remove(clickedDie.Name.Last());
-            clickedDie.Hide();
+            userRolls[rollDieIndex] = NONE;
+            clickedDie.Visible = false;
+            ShowKeepDie(keepDieIndex);
         }
 
         private void keep_DoubleClick(object sender, EventArgs e)
@@ -549,17 +667,43 @@ namespace Yahtzee
             // sometimes that will be at the end but if the user is moving dice back and forth
             // it may be in the middle somewhere
             int openPB = GetFirstAvailablePB(userRolls);
-            userRolls[openPB] = clickedDie.Name.Last();
+            string labelName = clickedDie.Name;
+            int keepDieIndex = (int)Char.GetNumericValue(labelName[labelName.Length - 1]);
+            int rollDieIndex = -1;
+            int rollValue = userKeeps[keepDieIndex];
+
+            if (openPB != NONE)
+            {
+                userRolls[openPB] = rollValue;
+                rollDieIndex = openPB;
+            }
+            else
+            {
+                userRolls.Add(rollValue);
+                rollDieIndex = userRolls.LastIndexOf(rollValue);
+            }
+
 
             // clear the die in the keep data structure
             // hide the picture box
-            userKeeps.Remove(clickedDie.Name.Last());
-            clickedDie.Hide();
+            userKeeps[keepDieIndex] = NONE;
+            clickedDie.Visible = false;
+            ShowRollDie(rollDieIndex);
         }
 
         private void newGameButton_Click(object sender, EventArgs e)
         {
+            //reset the user score card
+            //hide both sets of dice
+            //reset both sets of dice data structures
+            //Enable Roll button
 
+            ResetUserUIScoreCard();
+            HideAllKeepDice();
+            HideAllRollDice();
+            userKeeps.Clear();
+            userRolls.Clear();
+            rollButton.Enabled = true;
         }
         #endregion
     }
